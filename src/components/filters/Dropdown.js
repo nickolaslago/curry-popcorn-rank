@@ -7,6 +7,7 @@
 export function Dropdown(options, defaultValue, onChange) {
   const select = document.createElement("select");
   select.style.width = "100%";
+  select.style.height = "40px";
   select.style.background = "var(--color-surface)";
   select.style.color = "var(--color-text-primary)";
   select.style.border = "1px solid var(--color-border)";

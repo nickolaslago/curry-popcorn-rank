@@ -87,6 +87,7 @@ function buildCompareColumn(defaultTeam, mirrored) {
 
   const titleSlot = document.createElement("div");
   titleSlot.appendChild(H2Title(defaultTeam));
+  titleSlot.appendChild(Description(teamsByName.get(defaultTeam).arena));
 
   const radarSlot = document.createElement("div");
   radarSlot.style.display = "flex";
@@ -118,8 +119,10 @@ function buildCompareColumn(defaultTeam, mirrored) {
   const card = CardContainer([cardRow]);
 
   const dropdown = Dropdown(teamNames, defaultTeam, (team) => {
-    titleSlot.replaceChildren(H2Title(team));
-    radarSlot.replaceChildren(RadarChart(teamsByName.get(team)));
+    const data = teamsByName.get(team);
+    titleSlot.replaceChildren(H2Title(team), Description(data.arena));
+    radarSlot.replaceChildren(RadarChart(data));
+    imageSlot.replaceChildren(TeamImage(logoSrc(team), team, {height: 180, width: "100%"}));
   });
 
   col.appendChild(dropdown);
@@ -130,7 +133,7 @@ function buildCompareColumn(defaultTeam, mirrored) {
 
 const grid = document.createElement("div");
 grid.style.display = "grid";
-grid.style.gridTemplateColumns = "45% 10% 45%";
+grid.style.gridTemplateColumns = "45fr 10fr 45fr";
 grid.style.gap = "var(--gap-md)";
 grid.style.alignItems = "start";
 
