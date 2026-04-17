@@ -1,3 +1,7 @@
+# Observable Framework cache
+src/.observablehq/cache/
+dist/
+
 # Logs
 logs
 *.log
