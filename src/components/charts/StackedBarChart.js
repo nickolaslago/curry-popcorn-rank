@@ -1,5 +1,5 @@
 /**
- * StackedBarChart — horizontal stacked bar built with Chart.js.
+ * StackedBarChart — vertical stacked bar built with Chart.js.
  * Expects rows with {team, freshness, saltiness, crunchiness, butter,
  * presentation, total} and renders one stacked bar per team, sorted by total.
  */
@@ -14,7 +14,7 @@ function readVar(name, fallback) {
 }
 
 export function StackedBarChart(data, options = {}) {
-  const { height = 720 } = options;
+  const { height = 350 } = options;
 
   const categoryColors = {
     freshness: readVar("--color-freshness", "#f5c842"),
@@ -25,9 +25,10 @@ export function StackedBarChart(data, options = {}) {
   };
   const textPrimary = readVar("--color-text-primary", "#f5e6c8");
   const borderColor = readVar("--color-border", "#5c3d1e");
+  const surfaceColor = readVar("--color-surface", "#2a1a0a");
   const fontBody = readVar("--font-body", "Inter, sans-serif");
 
-  const sorted = [...data].sort((a, b) => a.total - b.total); // ascending so largest is at the top when y-axis reversed
+  const sorted = [...data].sort((a, b) => b.total - a.total);
   const labels = sorted.map(d => d.team);
 
   const datasets = CATEGORIES.map(cat => ({
@@ -56,33 +57,76 @@ export function StackedBarChart(data, options = {}) {
   canvasWrap.appendChild(canvas);
   container.appendChild(canvasWrap);
 
+  const totalLabelsPlugin = {
+    id: "totalLabels",
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const count = sorted.length;
+      const px = 5, py = 3, fontSize = 11, radius = 3;
+
+      ctx.font = `bold ${fontSize}px ${fontBody}`;
+
+      for (let i = 0; i < count; i++) {
+        // Find the true top of the full visible stack and sum visible categories
+        let topY = Infinity;
+        let visibleSum = 0;
+        for (let d = 0; d < CATEGORIES.length; d++) {
+          const meta = chart.getDatasetMeta(d);
+          if (meta.data[i]) topY = Math.min(topY, meta.data[i].y);
+          if (chart.isDatasetVisible(d)) visibleSum += sorted[i][CATEGORIES[d]];
+        }
+
+        const barX = chart.getDatasetMeta(0).data[i].x;
+        const text = String(visibleSum);
+        const tw = ctx.measureText(text).width;
+        const bw = tw + px * 2, bh = fontSize + py * 2;
+        const bx = barX - bw / 2, by = topY - bh - 5;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, radius);
+        ctx.fillStyle = surfaceColor;
+        ctx.fill();
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = textPrimary;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, barX, by + bh / 2);
+        ctx.restore();
+      }
+    }
+  };
+
   new Chart(canvas, {
     type: "bar",
     data: { labels, datasets },
+    plugins: [totalLabelsPlugin],
     options: {
-      indexAxis: "y",
+      indexAxis: "x",
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: 0 },
+      layout: { padding: { top: 28, bottom: 0, left: 0, right: 0 } },
       scales: {
         x: {
           stacked: true,
-          min: 8,
+          ticks: { color: textPrimary, font: { family: fontBody } },
+          grid: { color: borderColor, display: false }
+        },
+        y: {
+          stacked: true,
+          min: 0,
           max: 25,
           ticks: { color: textPrimary, font: { family: fontBody } },
           grid: { color: borderColor },
           title: {
-            display: true,
+            display: false,
             text: "Total popcorn score",
             color: textPrimary,
             font: { family: fontBody, size: 12 }
           }
-        },
-        y: {
-          stacked: true,
-          reverse: true,
-          ticks: { color: textPrimary, font: { family: fontBody } },
-          grid: { color: borderColor, display: false }
         }
       },
       plugins: {
