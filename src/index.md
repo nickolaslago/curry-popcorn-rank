@@ -5,31 +5,19 @@ theme: dashboard
 <link rel="stylesheet" href="theme.css">
 
 ```js
-import * as d3 from "npm:d3";
+import { H1Title, H2Title, Description } from "./components/typography.js";
+import { Image as TeamImage } from "./components/media.js";
+import { CardContainer } from "./components/layout.js";
+import { StackedBarChart } from "./components/charts/StackedBarChart.js";
+import { RadarChart } from "./components/charts/RadarChart.js";
+import { Dropdown } from "./components/filters/Dropdown.js";
 ```
 
 ```js
 const popcorn = await FileAttachment("data/popcorn.csv").csv({typed: true});
-const categories = ["freshness", "saltiness", "crunchiness", "butter", "presentation"];
-const categoryColors = {
-  freshness: getComputedStyle(document.documentElement).getPropertyValue("--color-freshness").trim() || "#f5c842",
-  saltiness: getComputedStyle(document.documentElement).getPropertyValue("--color-saltiness").trim() || "#e8a020",
-  crunchiness: getComputedStyle(document.documentElement).getPropertyValue("--color-crunchiness").trim() || "#d4701a",
-  butter: getComputedStyle(document.documentElement).getPropertyValue("--color-butter").trim() || "#f0e080",
-  presentation: getComputedStyle(document.documentElement).getPropertyValue("--color-presentation").trim() || "#c85a10"
-};
-const textPrimary = getComputedStyle(document.documentElement).getPropertyValue("--color-text-primary").trim() || "#f5e6c8";
-const textMuted = getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted").trim() || "#8a6d3b";
-const borderColor = getComputedStyle(document.documentElement).getPropertyValue("--color-border").trim() || "#5c3d1e";
-```
-
-```js
-const teamsSorted = [...popcorn].sort((a, b) => d3.ascending(a.team, b.team));
-const teamNames = teamsSorted.map(d => d.team);
 const teamsByName = new Map(popcorn.map(d => [d.team, d]));
-```
+const teamNames = [...popcorn].sort((a, b) => a.team.localeCompare(b.team)).map(d => d.team);
 
-```js
 const nbaTeamIds = {
   "Atlanta Hawks": "1610612737",
   "Boston Celtics": "1610612738",
@@ -62,241 +50,104 @@ const nbaTeamIds = {
   "Washington Wizards": "1610612764"
 };
 
-function teamInitials(name) {
-  return name
-    .split(/[\s/]+/)
-    .filter(Boolean)
-    .map(w => w[0])
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
-}
-
-function logoHTML(teamName) {
+function logoSrc(teamName) {
   const id = nbaTeamIds[teamName];
-  const initials = teamInitials(teamName);
-  if (!id) {
-    return `<div class="logo-fallback">${initials}</div>`;
+  return id ? `https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg` : "";
+}
+```
+
+```js
+// Row 1: title + description
+const row1 = document.createElement("div");
+row1.style.textAlign = "center";
+row1.style.padding = "var(--gap-lg) 0";
+row1.style.borderBottom = "1px solid var(--color-border)";
+row1.style.marginBottom = "var(--gap-lg)";
+row1.style.display = "flex";
+row1.style.flexDirection = "column";
+row1.style.alignItems = "center";
+row1.style.gap = "var(--gap-md)";
+row1.appendChild(H1Title("Steph Curry's NBA Popcorn Rankings"));
+row1.appendChild(Description("Every NBA arena rated by the man himself — freshness, saltiness, crunchiness, butter, and presentation."));
+display(row1);
+```
+
+```js
+// Row 2: stacked bar chart with all teams
+display(StackedBarChart(popcorn));
+```
+
+```js
+// Row 3: three-column comparison layout (45% / 10% / 45%)
+function buildCompareColumn(defaultTeam, mirrored) {
+  const col = document.createElement("div");
+  col.style.display = "flex";
+  col.style.flexDirection = "column";
+  col.style.gap = "var(--gap-md)";
+
+  const titleSlot = document.createElement("div");
+  titleSlot.appendChild(H2Title(defaultTeam));
+
+  const radarSlot = document.createElement("div");
+  radarSlot.style.display = "flex";
+  radarSlot.style.alignItems = "center";
+  radarSlot.style.justifyContent = "center";
+  radarSlot.style.minHeight = "220px";
+  radarSlot.appendChild(RadarChart(teamsByName.get(defaultTeam)));
+
+  const imageSlot = document.createElement("div");
+  imageSlot.style.display = "flex";
+  imageSlot.style.alignItems = "center";
+  imageSlot.style.justifyContent = "center";
+  imageSlot.style.minHeight = "220px";
+  imageSlot.appendChild(TeamImage(logoSrc(defaultTeam), defaultTeam, {height: 180, width: "100%"}));
+
+  const cardRow = document.createElement("div");
+  cardRow.style.display = "grid";
+  cardRow.style.gridTemplateColumns = "1fr 1fr";
+  cardRow.style.gap = "var(--gap-md)";
+  cardRow.style.alignItems = "center";
+  if (mirrored) {
+    cardRow.appendChild(imageSlot);
+    cardRow.appendChild(radarSlot);
+  } else {
+    cardRow.appendChild(radarSlot);
+    cardRow.appendChild(imageSlot);
   }
-  const url = `https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg`;
-  const fallback = `this.onerror=null;this.outerHTML='<div class=\\'logo-fallback\\'>${initials}</div>';`;
-  return `<img src="${url}" alt="${teamName} logo" onerror="${fallback}">`;
-}
-```
 
-```js
-function drawSpider(container, team) {
-  const size = 220;
-  const margin = 34;
-  const radius = (size - margin * 2) / 2;
-  const cx = size / 2;
-  const cy = size / 2;
-  const levels = 5;
-  const max = 5;
+  const card = CardContainer([cardRow]);
 
-  const node = typeof container === "string" ? document.getElementById(container) : container;
-  node.innerHTML = "";
-
-  const svg = d3.select(node)
-    .append("svg")
-    .attr("class", "spider")
-    .attr("width", size)
-    .attr("height", size)
-    .attr("viewBox", `0 0 ${size} ${size}`);
-
-  const angleSlice = (Math.PI * 2) / categories.length;
-
-  // grid rings
-  for (let lvl = 1; lvl <= levels; lvl++) {
-    svg.append("circle")
-      .attr("cx", cx)
-      .attr("cy", cy)
-      .attr("r", (radius / levels) * lvl)
-      .attr("fill", "none")
-      .attr("stroke", borderColor)
-      .attr("stroke-width", 1)
-      .attr("opacity", 0.5);
-  }
-
-  // axes
-  categories.forEach((cat, i) => {
-    const angle = angleSlice * i - Math.PI / 2;
-    const x2 = cx + Math.cos(angle) * radius;
-    const y2 = cy + Math.sin(angle) * radius;
-    svg.append("line")
-      .attr("x1", cx).attr("y1", cy)
-      .attr("x2", x2).attr("y2", y2)
-      .attr("stroke", borderColor)
-      .attr("stroke-width", 1)
-      .attr("opacity", 0.6);
+  const dropdown = Dropdown(teamNames, defaultTeam, (team) => {
+    titleSlot.replaceChildren(H2Title(team));
+    radarSlot.replaceChildren(RadarChart(teamsByName.get(team)));
   });
 
-  // polygon points
-  const points = categories.map((cat, i) => {
-    const val = Math.max(0, Math.min(max, team[cat] ?? 0));
-    const angle = angleSlice * i - Math.PI / 2;
-    const r = (val / max) * radius;
-    return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
-  });
-
-  // filled polygon with neutral low-opacity fill, solid stroke
-  svg.append("polygon")
-    .attr("points", points.map(p => p.join(",")).join(" "))
-    .attr("fill", textPrimary)
-    .attr("fill-opacity", 0.12)
-    .attr("stroke", textPrimary)
-    .attr("stroke-width", 2);
-
-  // vertex dots colored per category
-  categories.forEach((cat, i) => {
-    svg.append("circle")
-      .attr("cx", points[i][0])
-      .attr("cy", points[i][1])
-      .attr("r", 4)
-      .attr("fill", categoryColors[cat])
-      .attr("stroke", textPrimary)
-      .attr("stroke-width", 1);
-  });
-
-  // labels around outside, colored per category
-  categories.forEach((cat, i) => {
-    const angle = angleSlice * i - Math.PI / 2;
-    const lx = cx + Math.cos(angle) * (radius + 16);
-    const ly = cy + Math.sin(angle) * (radius + 16);
-    let anchor = "middle";
-    if (Math.cos(angle) > 0.2) anchor = "start";
-    else if (Math.cos(angle) < -0.2) anchor = "end";
-    svg.append("text")
-      .attr("x", lx)
-      .attr("y", ly)
-      .attr("text-anchor", anchor)
-      .attr("dominant-baseline", "middle")
-      .attr("fill", categoryColors[cat])
-      .attr("font-size", 11)
-      .attr("font-weight", 600)
-      .text(cat);
-  });
-
-  return svg.node();
+  col.appendChild(dropdown);
+  col.appendChild(titleSlot);
+  col.appendChild(card);
+  return col;
 }
-```
 
-<div class="viz-title">
-  <h1>Steph Curry's NBA Popcorn Rankings</h1>
-  <p>Every NBA arena rated by the man himself — freshness, saltiness, crunchiness, butter, and presentation.</p>
-</div>
+const grid = document.createElement("div");
+grid.style.display = "grid";
+grid.style.gridTemplateColumns = "45% 10% 45%";
+grid.style.gap = "var(--gap-md)";
+grid.style.alignItems = "start";
 
-<div class="viz-bar">
+const center = document.createElement("div");
+center.textContent = "×";
+center.style.display = "flex";
+center.style.alignItems = "center";
+center.style.justifyContent = "center";
+center.style.minHeight = "400px";
+center.style.fontFamily = "var(--font-title)";
+center.style.color = "var(--color-text-secondary)";
+center.style.fontSize = "4rem";
+center.style.fontWeight = "300";
 
-```js
-const barData = popcorn.flatMap(d =>
-  categories.map(cat => ({team: d.team, category: cat, value: d[cat], total: d.total, row: d}))
-);
+grid.appendChild(buildCompareColumn("Dallas Mavericks", false));
+grid.appendChild(center);
+grid.appendChild(buildCompareColumn("Los Angeles Clippers/Lakers", true));
 
-const teamOrder = [...popcorn].sort((a, b) => d3.descending(a.total, b.total)).map(d => d.team);
-
-const barChart = Plot.plot({
-  width: 1100,
-  height: 720,
-  marginLeft: 180,
-  marginRight: 20,
-  marginTop: 40,
-  marginBottom: 50,
-  style: {
-    background: "transparent",
-    color: textPrimary,
-    fontFamily: "Inter, sans-serif",
-    fontSize: "12px"
-  },
-  x: {
-    domain: [8, 25],
-    label: "Total popcorn score →",
-    grid: true,
-    labelAnchor: "center"
-  },
-  y: {
-    domain: teamOrder,
-    label: null
-  },
-  color: {
-    domain: categories,
-    range: categories.map(c => categoryColors[c]),
-    legend: true,
-    label: "Category"
-  },
-  marks: [
-    Plot.barX(barData, {
-      y: "team",
-      x: "value",
-      fill: "category",
-      order: categories,
-      title: d => `${d.team}\nfreshness: ${d.row.freshness}\nsaltiness: ${d.row.saltiness}\ncrunchiness: ${d.row.crunchiness}\nbutter: ${d.row.butter}\npresentation: ${d.row.presentation}\ntotal: ${d.total}`,
-      tip: true
-    }),
-    Plot.ruleX([8])
-  ]
-});
-
-display(barChart);
-```
-
-</div>
-
-```js
-const leftTeamInput = Inputs.select(teamNames, {value: "Dallas Mavericks", label: null});
-const rightTeamInput = Inputs.select(teamNames, {value: "Los Angeles Clippers/Lakers", label: null});
-const leftTeamName = Generators.input(leftTeamInput);
-const rightTeamName = Generators.input(rightTeamInput);
-```
-
-<div class="compare-grid">
-  <div class="compare-col" id="left-col">
-    <div class="compare-dropdown" id="left-dropdown"></div>
-    <div class="team-info" id="left-info"></div>
-    <div class="compare-sub">
-      <div class="spider-slot" id="left-spider"></div>
-      <div class="logo-slot" id="left-logo"></div>
-    </div>
-  </div>
-  <div class="compare-center">×</div>
-  <div class="compare-col" id="right-col">
-    <div class="compare-dropdown" id="right-dropdown"></div>
-    <div class="team-info" id="right-info"></div>
-    <div class="compare-sub mirrored">
-      <div class="logo-slot" id="right-logo"></div>
-      <div class="spider-slot" id="right-spider"></div>
-    </div>
-  </div>
-</div>
-
-```js
-// Mount dropdowns once
-document.getElementById("left-dropdown").replaceChildren(leftTeamInput);
-document.getElementById("right-dropdown").replaceChildren(rightTeamInput);
-```
-
-```js
-// Left column: reacts only to leftTeamName
-{
-  const team = teamsByName.get(leftTeamName);
-  const info = document.getElementById("left-info");
-  info.innerHTML = `<div class="team-name">${team.team}</div><div class="team-arena">${team.arena}</div>`;
-
-  drawSpider(document.getElementById("left-spider"), team);
-
-  document.getElementById("left-logo").innerHTML = logoHTML(team.team);
-}
-```
-
-```js
-// Right column: reacts only to rightTeamName
-{
-  const team = teamsByName.get(rightTeamName);
-  const info = document.getElementById("right-info");
-  info.innerHTML = `<div class="team-name">${team.team}</div><div class="team-arena">${team.arena}</div>`;
-
-  drawSpider(document.getElementById("right-spider"), team);
-
-  document.getElementById("right-logo").innerHTML = logoHTML(team.team);
-}
+display(grid);
 ```
