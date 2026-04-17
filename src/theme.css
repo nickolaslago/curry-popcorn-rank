@@ -1,0 +1,226 @@
+:root {
+  /* Popcorn warm palette */
+  --color-bg: #1a1208;
+  --color-surface: #2c1f0e;
+  --color-border: #5c3d1e;
+
+  --color-text-primary: #f5e6c8;
+  --color-text-secondary: #c8a96e;
+  --color-text-muted: #8a6d3b;
+
+  /* Category colors for stacked bar and spider */
+  --color-freshness: #f5c842;
+  --color-saltiness: #e8a020;
+  --color-crunchiness: #d4701a;
+  --color-butter: #f0e080;
+  --color-presentation: #c85a10;
+
+  /* Layout */
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 32px;
+  --radius: 8px;
+
+  /* Typography */
+  --font-title: 'Georgia', serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+html,
+body,
+#observablehq-main,
+#observablehq-center {
+  background: var(--color-bg) !important;
+  color: var(--color-text-primary) !important;
+  font-family: var(--font-body);
+}
+
+#observablehq-main {
+  max-width: 1200px !important;
+  margin: 0 auto;
+  padding: var(--gap-lg) var(--gap-md);
+}
+
+/* ---------- Row 1: title ---------- */
+.viz-title {
+  text-align: center;
+  padding: var(--gap-lg) 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--gap-lg);
+}
+
+.viz-title h1 {
+  font-family: var(--font-title);
+  color: var(--color-text-primary);
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0 0 var(--gap-md) 0;
+  letter-spacing: -0.02em;
+}
+
+.viz-title p {
+  font-family: var(--font-body);
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* ---------- Row 2: stacked bar ---------- */
+.viz-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap-md);
+  margin-bottom: var(--gap-lg);
+}
+
+.viz-bar figure {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  margin: 0;
+}
+
+.viz-bar svg {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+}
+
+.viz-bar svg text {
+  fill: var(--color-text-primary) !important;
+  font-family: var(--font-body);
+}
+
+.viz-bar svg [aria-label="x-grid"] line,
+.viz-bar svg [aria-label="y-grid"] line {
+  stroke: var(--color-border) !important;
+}
+
+/* Legend */
+.viz-bar figure > div {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+}
+
+.viz-bar .plot-swatches span {
+  color: var(--color-text-primary) !important;
+}
+
+/* ---------- Row 3: comparison grid ---------- */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 45% 10% 45%;
+  gap: var(--gap-md);
+  align-items: start;
+}
+
+.compare-col {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.compare-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  font-family: var(--font-title);
+  color: var(--color-text-secondary);
+  font-size: 4rem;
+  text-align: center;
+  font-weight: 300;
+}
+
+.compare-dropdown select {
+  width: 100%;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap-sm) var(--gap-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.compare-dropdown form {
+  margin: 0;
+}
+
+.compare-dropdown label {
+  display: none;
+}
+
+.team-info .team-name {
+  font-family: var(--font-title);
+  color: var(--color-text-primary);
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.team-info .team-arena {
+  font-family: var(--font-body);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  margin: 4px 0 0 0;
+}
+
+.compare-sub {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-md);
+  align-items: center;
+}
+
+.compare-sub.mirrored {
+  grid-template-columns: 1fr 1fr;
+}
+
+.spider-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.logo-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.logo-slot img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.logo-fallback {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  color: var(--color-text-secondary);
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+/* Spider chart text */
+.spider svg text {
+  font-family: var(--font-body);
+  fill: var(--color-text-primary);
+  font-size: 11px;
+}
