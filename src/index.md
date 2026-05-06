@@ -5,152 +5,212 @@ theme: dashboard
 <link rel="stylesheet" href="theme.css">
 
 ```js
-import { H1Title, H2Title, Description } from "./components/typography.js";
-import { Image as TeamImage } from "./components/media.js";
-import { CardContainer } from "./components/layout.js";
-import { StackedBarChart } from "./components/charts/StackedBarChart.js";
 import { RadarChart } from "./components/charts/RadarChart.js";
-import { Dropdown } from "./components/filters/Dropdown.js";
 ```
 
 ```js
 const popcorn = await FileAttachment("data/popcorn.csv").csv({typed: true});
-const teamsByName = new Map(popcorn.map(d => [d.team, d]));
-const teamNames = [...popcorn].sort((a, b) => a.team.localeCompare(b.team)).map(d => d.team);
+const ranked = [...popcorn].sort((a, b) => b.total - a.total);
+const teamsByName = new Map(ranked.map(d => [d.team, d]));
+const rankByTeam = new Map(ranked.map((d, i) => [d.team, i + 1]));
+const teamNamesAlpha = [...ranked].sort((a, b) => a.team.localeCompare(b.team)).map(d => d.team);
 
-const nbaTeamIds = {
-  "Atlanta Hawks": "1610612737",
-  "Boston Celtics": "1610612738",
-  "Brooklyn Nets": "1610612751",
-  "Charlotte Hornets": "1610612766",
-  "Chicago Bulls": "1610612741",
-  "Cleveland Cavaliers": "1610612739",
-  "Dallas Mavericks": "1610612742",
-  "Denver Nuggets": "1610612743",
-  "Detroit Pistons": "1610612765",
-  "Golden State Warriors": "1610612744",
-  "Houston Rockets": "1610612745",
-  "Indiana Pacers": "1610612754",
-  "Los Angeles Clippers/Lakers": "1610612747",
-  "Memphis Grizzlies": "1610612763",
-  "Miami Heat": "1610612748",
-  "Milwaukee Bucks": "1610612749",
-  "Minnesota Timberwolves": "1610612750",
-  "New Orleans Pelicans": "1610612740",
-  "New York City Knicks": "1610612752",
-  "Oklahoma City Thunder": "1610612760",
-  "Orlando Magic": "1610612753",
-  "Philadelphia Sixers": "1610612755",
-  "Phoenix Suns": "1610612756",
-  "Portland Trailblazers": "1610612757",
-  "Sacramento Kings": "1610612758",
-  "San Antonio Spurs": "1610612759",
-  "Toronto Raptors": "1610612761",
-  "Utah Jazz": "1610612762",
-  "Washington Wizards": "1610612764"
-};
+const CATEGORIES = [
+  {key: "freshness",    label: "Freshness",    color: "#F5E060"},
+  {key: "saltiness",    label: "Saltiness",    color: "#F5B93C"},
+  {key: "crunchiness",  label: "Crunchiness",  color: "#E07B1A"},
+  {key: "butter",       label: "Butter",       color: "#C25A0F"},
+  {key: "presentation", label: "Presentation", color: "#8B3010"}
+];
 
-function logoSrc(teamName) {
-  const id = nbaTeamIds[teamName];
-  return id ? `https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg` : "";
+const MAX_TOTAL = 25;
+
+function tierClass(rank) {
+  if (rank === 1) return "gold";
+  if (rank === 2) return "silver";
+  if (rank === 3) return "bronze";
+  return "";
+}
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") node.className = v;
+    else if (k === "style") Object.assign(node.style, v);
+    else if (k === "html") node.innerHTML = v;
+    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const child of [].concat(children)) {
+    if (child == null) continue;
+    node.appendChild(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
 }
 ```
 
 ```js
-// Row 1: title + description
-const row1 = document.createElement("div");
-row1.style.textAlign = "center";
-row1.style.padding = "var(--gap-lg) 0";
-row1.style.borderBottom = "1px solid var(--color-border)";
-row1.style.marginBottom = "var(--gap-lg)";
-row1.style.display = "flex";
-row1.style.flexDirection = "column";
-row1.style.alignItems = "center";
-row1.style.gap = "var(--gap-md)";
-row1.appendChild(H1Title("Steph Curry's NBA Popcorn Rankings"));
-row1.appendChild(Description("Every NBA arena rated by the man himself — freshness, saltiness, crunchiness, butter, and presentation."));
-display(row1);
+// ── HERO ──
+const hero = el("section", {class: "hero"}, [
+  el("div", {class: "hero-left"}, [
+    el("div", {class: "eyebrow"}, [
+      el("span", {class: "eyebrow-dot"}),
+      el("span", {class: "eyebrow-text"}, "NBA Arena Report")
+    ]),
+    el("p", {class: "hero-pre"}, "Steph Curry rates every"),
+    el("h1", {class: "hero-title", html: 'Popcorn <span class="accent">Rankings</span>'}),
+    el("p", {class: "hero-sub"}, "30 arenas. 5 categories. One very important question: whose popcorn actually slaps?")
+  ]),
+  el("div", {class: "hero-stat"}, [
+    el("div", {class: "hero-stat-num"}, "30"),
+    el("div", {class: "hero-stat-label"}, "Arenas Rated")
+  ])
+]);
+display(hero);
 ```
 
 ```js
-// Row 2: stacked bar chart with all teams
-display(StackedBarChart(popcorn));
+// ── LEGEND ──
+const legend = el("div", {class: "legend"}, [
+  el("span", {class: "legend-label"}, "Categories"),
+  ...CATEGORIES.map(c =>
+    el("span", {class: "legend-item"}, [
+      el("span", {class: "legend-dot", style: {background: c.color}}),
+      c.label
+    ])
+  )
+]);
+display(legend);
 ```
 
 ```js
-// Row 3: three-column comparison layout (45% / 10% / 45%)
-function buildCompareColumn(defaultTeam, mirrored) {
-  const col = document.createElement("div");
-  col.style.display = "flex";
-  col.style.flexDirection = "column";
-  col.style.gap = "var(--gap-md)";
+// ── RANKINGS LIST ──
+const rankingsHead = el("div", {class: "section-head"}, [
+  el("h2", {class: "section-title"}, "Full Rankings"),
+  el("span", {class: "section-kicker"}, "All 30 · sorted by total")
+]);
+display(rankingsHead);
 
-  const titleSlot = document.createElement("div");
-  titleSlot.appendChild(H2Title(defaultTeam));
-  titleSlot.appendChild(Description(teamsByName.get(defaultTeam).arena));
+const rankings = el("div", {class: "rankings"});
+ranked.forEach((d, i) => {
+  const rank = i + 1;
+  const tier = tierClass(rank);
 
-  const radarSlot = document.createElement("div");
-  radarSlot.style.display = "flex";
-  radarSlot.style.alignItems = "center";
-  radarSlot.style.justifyContent = "center";
-  radarSlot.style.minHeight = "220px";
-  radarSlot.appendChild(RadarChart(teamsByName.get(defaultTeam)));
+  const segments = CATEGORIES.map(c =>
+    el("div", {
+      class: "rank-seg",
+      style: {
+        background: c.color,
+        flexGrow: String(d[c.key] || 0)
+      },
+      title: `${c.label}: ${d[c.key]}`
+    })
+  );
 
-  const imageSlot = document.createElement("div");
-  imageSlot.style.display = "flex";
-  imageSlot.style.alignItems = "center";
-  imageSlot.style.justifyContent = "center";
-  imageSlot.style.minHeight = "220px";
-  imageSlot.appendChild(TeamImage(logoSrc(defaultTeam), defaultTeam, {height: 180, width: "100%"}));
+  const fill = el("div", {
+    class: "rank-bar-fill",
+    style: {width: `${(d.total / MAX_TOTAL) * 100}%`}
+  }, segments);
 
-  const cardRow = document.createElement("div");
-  cardRow.style.display = "grid";
-  cardRow.style.gridTemplateColumns = "1fr 1fr";
-  cardRow.style.gap = "var(--gap-md)";
-  cardRow.style.alignItems = "center";
-  if (mirrored) {
-    cardRow.appendChild(imageSlot);
-    cardRow.appendChild(radarSlot);
-  } else {
-    cardRow.appendChild(radarSlot);
-    cardRow.appendChild(imageSlot);
+  const row = el("div", {class: `rank-row${tier ? " " + tier : ""}`}, [
+    el("div", {class: "rank-num"}, String(rank).padStart(2, "0")),
+    el("div", {class: "rank-info"}, [
+      el("div", {class: "rank-name"}, d.team),
+      el("div", {class: "rank-arena"}, d.arena)
+    ]),
+    el("div", {class: "rank-bar"}, [fill]),
+    el("div", {class: "rank-score"}, String(d.total))
+  ]);
+
+  rankings.appendChild(row);
+});
+display(rankings);
+```
+
+```js
+// ── HEAD TO HEAD ──
+const compareHead = el("div", {class: "section-head"}, [
+  el("h2", {class: "section-title"}, "Head-to-Head"),
+  el("span", {class: "section-kicker"}, "Compare any two arenas")
+]);
+display(compareHead);
+
+function makeSelect(initial, onChange) {
+  const wrap = el("div", {class: "versus-select"});
+  const select = document.createElement("select");
+  for (const name of teamNamesAlpha) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    if (name === initial) opt.selected = true;
+    select.appendChild(opt);
+  }
+  select.addEventListener("change", (e) => onChange(e.target.value));
+  wrap.appendChild(select);
+  return wrap;
+}
+
+function buildCompareCard(initialTeam) {
+  const card = el("div", {class: "compare-card"});
+
+  function render(teamName) {
+    card.replaceChildren();
+    const d = teamsByName.get(teamName);
+    const rank = rankByTeam.get(teamName);
+
+    const head = el("div", {class: "compare-head"}, [
+      el("div", {}, [
+        el("span", {class: "compare-rank"}, `Rank #${rank}`),
+        el("h3", {class: "compare-name"}, d.team),
+        el("p", {class: "compare-arena"}, d.arena)
+      ]),
+      el("div", {class: "compare-score"}, [
+        el("span", {class: "compare-score-num"}, String(d.total)),
+        el("span", {class: "compare-score-label"}, "of 25")
+      ])
+    ]);
+
+    const radarSlot = el("div", {class: "compare-radar"});
+    radarSlot.appendChild(RadarChart(d, {size: 240}));
+
+    const mini = el("div", {class: "compare-mini"},
+      CATEGORIES.map(c =>
+        el("div", {class: "mini-row"}, [
+          el("span", {class: "mini-label"}, c.label),
+          el("div", {class: "mini-track"}, [
+            el("div", {
+              class: "mini-fill",
+              style: {
+                width: `${((d[c.key] || 0) / 5) * 100}%`,
+                background: c.color
+              }
+            })
+          ]),
+          el("span", {class: "mini-val"}, String(d[c.key] ?? 0))
+        ])
+      )
+    );
+
+    card.append(head, radarSlot, mini);
   }
 
-  const card = CardContainer([cardRow]);
-
-  const dropdown = Dropdown(teamNames, defaultTeam, (team) => {
-    const data = teamsByName.get(team);
-    titleSlot.replaceChildren(H2Title(team), Description(data.arena));
-    radarSlot.replaceChildren(RadarChart(data));
-    imageSlot.replaceChildren(TeamImage(logoSrc(team), team, {height: 180, width: "100%"}));
-  });
-
-  col.appendChild(dropdown);
-  col.appendChild(titleSlot);
-  col.appendChild(card);
-  return col;
+  render(initialTeam);
+  return {card, render};
 }
 
-const grid = document.createElement("div");
-grid.style.display = "grid";
-grid.style.gridTemplateColumns = "45fr 10fr 45fr";
-grid.style.gap = "var(--gap-md)";
-grid.style.alignItems = "start";
+const leftInitial  = ranked[0].team;
+const rightInitial = ranked[ranked.length - 1].team;
 
-const center = document.createElement("div");
-center.textContent = "×";
-center.style.display = "flex";
-center.style.alignItems = "center";
-center.style.justifyContent = "center";
-center.style.minHeight = "400px";
-center.style.fontFamily = "var(--font-title)";
-center.style.color = "var(--color-text-secondary)";
-center.style.fontSize = "4rem";
-center.style.fontWeight = "300";
+const left  = buildCompareCard(leftInitial);
+const right = buildCompareCard(rightInitial);
 
-grid.appendChild(buildCompareColumn("Dallas Mavericks", false));
-grid.appendChild(center);
-grid.appendChild(buildCompareColumn("Los Angeles Clippers/Lakers", true));
+const versus = el("div", {class: "versus"}, [
+  makeSelect(leftInitial,  (v) => left.render(v)),
+  el("div", {class: "versus-badge"}, "VS"),
+  makeSelect(rightInitial, (v) => right.render(v))
+]);
+display(versus);
 
+const grid = el("div", {class: "compare-grid"}, [left.card, right.card]);
 display(grid);
 ```
